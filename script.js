@@ -248,7 +248,7 @@ Horario servicio: ${service.horario}
   pedidos.push({id:pedidoID, nombre, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
   localStorage.setItem("fastgoPedidos", JSON.stringify(pedidos));
 
-  let waUrl = "https://wa.me/5212345678901?text=" + encodeURIComponent(msg);
+  let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
   setTimeout(() => {
     window.open(waUrl, "_blank");
     feedback.textContent = "¡Pedido generado y listo para enviar por WhatsApp!";
