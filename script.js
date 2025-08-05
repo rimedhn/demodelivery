@@ -15,8 +15,8 @@ document.querySelectorAll('.nav a').forEach(link => {
 });
 
 // === Configuración de Google Sheets ===
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQxxxxxxxxxxxxxxx/pub?output=csv'; // <-- Tu CSV de servicios
-const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQyyyyyyyyyyyyyyy/pub?output=csv'; // <-- CSV pedidos (opcional)
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv'; // <-- Tu CSV de servicios
+const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv'; // <-- CSV pedidos (opcional)
 
 let services = [];
 let categories = new Set();
