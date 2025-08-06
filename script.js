@@ -1,8 +1,7 @@
 // ==============================
 // FastGo sitio delivery/mandados
 // Flujo por pasos, geolocalización, autocompletado dinámico
-// Corrección: WhatsApp abre siempre, seguimiento toma datos correctos
-// Ajuste: ubicación por defecto La Ceiba, Honduras y enlaces/número correctos
+// Ajustes: ubicación por defecto La Ceiba, mapas más grandes, fix mapas invisibles, WhatsApp directo
 // ==============================
 
 function toggleMenu() {
@@ -17,8 +16,8 @@ document.querySelectorAll('.nav a').forEach(link => {
 });
 
 // === Configuración de Google Sheets ===
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv'; // Servicios
-const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv'; // Pedidos seguimiento
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv';
+const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv';
 
 let services = [];
 let categories = new Set();
@@ -96,7 +95,8 @@ function showSchedule() {
 showSchedule();
 
 // ==== Geolocalización y mapas dinámicos ====
-let userLocation = [15.7758, -86.7822]; // La Ceiba, Honduras por defecto
+// La Ceiba, Honduras por defecto
+let userLocation = [15.7758, -86.7822];
 function initUserLocation(cb) {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -104,85 +104,88 @@ function initUserLocation(cb) {
         userLocation = [pos.coords.latitude, pos.coords.longitude];
         cb && cb(userLocation);
       },
-      err => { cb && cb(userLocation); } // fallback si falla
+      err => { cb && cb(userLocation); }
     );
   } else {
     cb && cb(userLocation);
   }
 }
 
-// ==== MAPAS Y AUTOCOMPLETADO ====
+// Guarda instancias para invalidateSize
+let originMapInstance = null;
+let destinationMapInstance = null;
+
 function createDynamicMap(mapId, inputId, suggestionsId, coordsCallback, markerDefaultCoords) {
-  // Espera a que el contenedor exista y tenga tamaño
-  setTimeout(() => {
-    const map = L.map(mapId).setView(markerDefaultCoords, 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: "",
-      maxZoom: 18,
-    }).addTo(map);
-    let marker = L.marker(markerDefaultCoords, {draggable:true}).addTo(map);
-    coordsCallback(markerDefaultCoords);
+  // Espera a que el contenedor esté visible
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const map = L.map(mapId).setView(markerDefaultCoords, 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: "",
+        maxZoom: 18,
+      }).addTo(map);
+      let marker = L.marker(markerDefaultCoords, {draggable:true}).addTo(map);
+      coordsCallback(markerDefaultCoords);
 
-    // Autocompletar direcciones (Nominatim)
-    const input = document.getElementById(inputId);
-    const suggBox = document.getElementById(suggestionsId);
+      // ----- Autocompletar -----
+      const input = document.getElementById(inputId);
+      const suggBox = document.getElementById(suggestionsId);
 
-    let timeoutAC = null;
-    input.addEventListener('input', function() {
-      clearTimeout(timeoutAC);
-      const query = input.value.trim();
-      if (!query) { suggBox.innerHTML = ""; return; }
-      timeoutAC = setTimeout(() => {
-        // Nominatim con viewbox centrado en userLocation
-        let lat = userLocation[0], lng = userLocation[1];
-        let bbox = `${lng-0.08},${lat-0.08},${lng+0.08},${lat+0.08}`;
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=7&q=${encodeURIComponent(query)}&viewbox=${bbox}&bounded=1`)
-          .then(res => res.json())
-          .then(results => {
-            suggBox.innerHTML = "";
-            if (results.length === 0) return;
-            results.forEach((r, idx) => {
-              const item = document.createElement("div");
-              item.className = 'suggestion-item' + (idx === 0 ? ' active' : '');
-              // Icono por tipo
-              let icon = 'fa-map-pin';
-              if (r.type === "city" || r.type === "administrative") icon = 'fa-city';
-              if (r.type === "road") icon = 'fa-road';
-              if (r.type === "house" || r.type === "residential") icon = 'fa-home';
-              item.innerHTML = `
-                <span class="suggestion-icon"><i class="fas ${icon}"></i></span>
-                <span class="suggestion-name">${r.display_name.split(",")[0]}</span>
-                <span class="suggestion-details">${r.display_name}</span>
-              `;
-              item.onclick = () => {
-                input.value = r.display_name;
-                suggBox.innerHTML = "";
-                map.setView([r.lat, r.lon], 17);
-                marker.setLatLng([r.lat, r.lon]);
-                coordsCallback([parseFloat(r.lat), parseFloat(r.lon)]);
-              };
-              suggBox.appendChild(item);
+      let timeoutAC = null;
+      input.addEventListener('input', function() {
+        clearTimeout(timeoutAC);
+        const query = input.value.trim();
+        if (!query) { suggBox.innerHTML = ""; return; }
+        timeoutAC = setTimeout(() => {
+          let lat = userLocation[0], lng = userLocation[1];
+          let bbox = `${lng-0.08},${lat-0.08},${lng+0.08},${lat+0.08}`;
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=7&q=${encodeURIComponent(query)}&viewbox=${bbox}&bounded=1`)
+            .then(res => res.json())
+            .then(results => {
+              suggBox.innerHTML = "";
+              if (results.length === 0) return;
+              results.forEach((r, idx) => {
+                const item = document.createElement("div");
+                item.className = 'suggestion-item' + (idx === 0 ? ' active' : '');
+                let icon = 'fa-map-pin';
+                if (r.type === "city" || r.type === "administrative") icon = 'fa-city';
+                if (r.type === "road") icon = 'fa-road';
+                if (r.type === "house" || r.type === "residential") icon = 'fa-home';
+                item.innerHTML = `
+                  <span class="suggestion-icon"><i class="fas ${icon}"></i></span>
+                  <span class="suggestion-name">${r.display_name.split(",")[0]}</span>
+                  <span class="suggestion-details">${r.display_name}</span>
+                `;
+                item.onclick = () => {
+                  input.value = r.display_name;
+                  suggBox.innerHTML = "";
+                  map.setView([r.lat, r.lon], 17);
+                  marker.setLatLng([r.lat, r.lon]);
+                  coordsCallback([parseFloat(r.lat), parseFloat(r.lon)]);
+                };
+                suggBox.appendChild(item);
+              });
             });
-          });
-      }, 350);
-    });
+        }, 350);
+      });
 
-    map.on('click', function(e) {
-      marker.setLatLng(e.latlng);
-      coordsCallback([e.latlng.lat, e.latlng.lng]);
-      getReverseAddress(e.latlng.lat, e.latlng.lng, val => { input.value = val; });
-    });
+      map.on('click', function(e) {
+        marker.setLatLng(e.latlng);
+        coordsCallback([e.latlng.lat, e.latlng.lng]);
+        getReverseAddress(e.latlng.lat, e.latlng.lng, val => { input.value = val; });
+      });
 
-    marker.on('dragend', function(ev) {
-      const pos = marker.getLatLng();
-      coordsCallback([pos.lat, pos.lng]);
-      getReverseAddress(pos.lat, pos.lng, val => { input.value = val; });
-    });
+      marker.on('dragend', function(ev) {
+        const pos = marker.getLatLng();
+        coordsCallback([pos.lat, pos.lng]);
+        getReverseAddress(pos.lat, pos.lng, val => { input.value = val; });
+      });
 
-    input.addEventListener('blur', function() { setTimeout(()=>suggBox.innerHTML="", 150); });
-    map.invalidateSize();
-    return map;
-  }, 150); // Da tiempo a que el elemento esté visible
+      input.addEventListener('blur', function() { setTimeout(()=>suggBox.innerHTML="", 150); });
+      map.invalidateSize();
+      resolve(map);
+    }, 200);
+  });
 }
 
 function getReverseAddress(lat, lng, cb) {
@@ -196,21 +199,18 @@ let originCoords = null, destinationCoords = null;
 
 // Inicializar flujo por pasos y mapas
 window.addEventListener('DOMContentLoaded', () => {
-  // Oculta el formulario por pasos al inicio
   document.getElementById("order-stepper").style.display = "none";
-  // Botón para iniciar pedido
-  document.getElementById("start-order-btn").onclick = () => {
+  document.getElementById("start-order-btn").onclick = async () => {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
     document.getElementById("step-1").style.display = "block";
-    // Inicializa mapas cuando se va a usar el stepper (para asegurar que están visibles)
-    initUserLocation(loc => {
-      createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
-      createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
+    // Inicializa mapas cuando se va a usar el stepper
+    initUserLocation(async loc => {
+      originMapInstance = await createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
+      destinationMapInstance = await createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
     });
   };
 
-  // Navegación de pasos
   document.getElementById("next-step-1").onclick = () => {
     if (!document.getElementById("serviceType").value || !document.getElementById("description").value.trim()) {
       alert("Selecciona el tipo de servicio y escribe la descripción.");
@@ -218,6 +218,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById("step-1").style.display = "none";
     document.getElementById("step-2").style.display = "block";
+    setTimeout(() => {
+      if (originMapInstance) originMapInstance.invalidateSize();
+    }, 100);
   };
   document.getElementById("next-step-2").onclick = () => {
     if (!document.getElementById("origin").value.trim() || !originCoords) {
@@ -226,6 +229,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById("step-2").style.display = "none";
     document.getElementById("step-3").style.display = "block";
+    setTimeout(() => {
+      if (destinationMapInstance) destinationMapInstance.invalidateSize();
+    }, 100);
   };
   document.getElementById("next-step-3").onclick = () => {
     if (!document.getElementById("destination").value.trim() || !destinationCoords) {
@@ -236,7 +242,6 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById("step-4").style.display = "block";
   };
 
-  // Inicializa servicios
   loadServices();
 });
 
@@ -298,13 +303,11 @@ document.getElementById("track-form").onsubmit = function(e) {
     .then(res=>res.text())
     .then(csv=>{
       let pedidos = parseCSV(csv);
-      // Busca por encabezado, no por posición
       let pedido = pedidos.find(p=>p.id_pedido === id);
       if (!pedido) {
         result.textContent = "Pedido no encontrado.";
         result.style.color = "red";
       } else {
-        // Muestra correctamente los campos
         result.innerHTML = `
           <span><strong>Estado:</strong> ${pedido.estado || ''}</span><br>
           <span><strong>Servicio:</strong> ${pedido.servicio || ''}</span><br>
