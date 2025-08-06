@@ -1,12 +1,14 @@
-// === CONFIGURACION GOOGLE SHEETS ===
+// Google Sheets config
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv';
 const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv';
-
 let services = [];
 let categories = [];
 let selectedCategory = null;
+// Maps
+let userLocation = [15.7758, -86.7822];
+let originCoords = null, destinationCoords = null;
+let originMapInstance = null, destinationMapInstance = null;
 
-// === CSV PARSER ===
 function parseCSV(csv) {
   const rows = csv.trim().split('\n');
   const parseRow = row => {
@@ -35,8 +37,6 @@ function parseCSV(csv) {
     return obj;
   });
 }
-
-// === CATEGORIAS Y SERVICIOS ===
 function renderCategories() {
   const catsDiv = document.getElementById('categories-list');
   catsDiv.innerHTML = '';
@@ -77,11 +77,7 @@ function showSchedule() {
 }
 showSchedule();
 
-// === MAPAS Y AUTOCOMPLETADO ===
-let userLocation = [15.7758, -86.7822];
-let originCoords = null, destinationCoords = null;
-let originMapInstance = null, destinationMapInstance = null;
-
+// MAPAS Y AUTOCOMPLETADO
 function initUserLocation(cb) {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -167,7 +163,7 @@ function getReverseAddress(lat, lng, cb) {
     .then(data=>cb(data.display_name || `${lat},${lng}`));
 }
 
-// === FLUJO DE PEDIDO POR PASOS ===
+// FLUJO DE PEDIDO POR PASOS
 function initStepper() {
   let currentStep = 1;
   const totalSteps = 4;
@@ -242,12 +238,23 @@ function validateStep(stepNum) {
 window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
   document.getElementById('home').style.display = 'block';
+  document.getElementById('order-intro').style.display = 'none';
   document.querySelectorAll('#app-menu button').forEach(btn => {
     btn.onclick = function() {
       document.querySelectorAll('#app-menu button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const sectionId = btn.getAttribute('data-section');
       document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+      // Categorías y servicios sólo si NO está en el proceso
+      if(sectionId === 'services') {
+        document.getElementById('services').style.display = 'block';
+        document.getElementById('categories-list').style.display = 'flex';
+        document.getElementById('services-in-category').style.display = 'flex';
+      } else {
+        document.getElementById('categories-list').style.display = 'none';
+        document.getElementById('services-in-category').style.display = 'none';
+      }
+      // Pedido: intro/stepper
       if(sectionId === 'order-stepper') {
         if(document.getElementById('order-stepper').style.display !== 'block') {
           document.getElementById('order-intro').style.display = 'block';
@@ -258,7 +265,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if(sectionId === 'order-intro') {
         document.getElementById('order-intro').style.display = 'block';
       }
-      document.getElementById(sectionId).style.display = 'block';
+      if(sectionId !== 'services') document.getElementById(sectionId).style.display = 'block';
     };
   });
   document.getElementById("start-order-btn").onclick = function() {
@@ -270,13 +277,15 @@ window.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.step-tab[data-step="step-1"]').classList.add('active');
     document.querySelectorAll('#app-menu button').forEach(b => b.classList.remove('active'));
     document.querySelector('#app-menu button[data-section="order-stepper"]').classList.add('active');
+    document.getElementById('categories-list').style.display = 'none';
+    document.getElementById('services-in-category').style.display = 'none';
     initStepper();
-    // Inicializa mapas en pasos 2 y 3
     initUserLocation(loc => {
       createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
       createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
     });
   };
+
   fetch(SHEET_URL)
     .then(res => res.text())
     .then(csv => {
@@ -286,8 +295,11 @@ window.addEventListener('DOMContentLoaded', () => {
       renderCategories();
       renderServicesInCategory(selectedCategory);
       fillServiceSelect();
+      document.getElementById('categories-list').style.display = 'flex';
+      document.getElementById('services-in-category').style.display = 'flex';
     });
   showSchedule();
+
   window.selectService = function(id) {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
@@ -296,6 +308,8 @@ window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active','completed'));
     document.querySelector('.step-tab[data-step="step-1"]').classList.add('active');
     document.getElementById("serviceType").value = id;
+    document.getElementById('categories-list').style.display = 'none';
+    document.getElementById('services-in-category').style.display = 'none';
     initStepper();
     initUserLocation(loc => {
       createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
