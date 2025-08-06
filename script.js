@@ -242,12 +242,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // === Botón WhatsApp: genera y abre mensaje ===
 document.getElementById("whatsapp-send-btn").onclick = function(e) {
-  let form = document.getElementById("order-stepper-form");
-  if (!form.checkValidity()) {
-    form.reportValidity();
-    return;
-  }
-  let service = services.find(s => s.id === document.getElementById("serviceType").value);
+  // Recoge los datos de todos los pasos
+  let serviceId = document.getElementById("serviceType").value;
+  let service = services.find(s => s.id === serviceId);
   let desc = document.getElementById("description").value.trim();
   let origin = document.getElementById("origin").value.trim();
   let dest = document.getElementById("destination").value.trim();
@@ -257,6 +254,7 @@ document.getElementById("whatsapp-send-btn").onclick = function(e) {
   let feedback = document.getElementById("orderFeedback");
   feedback.textContent = "";
 
+  // Validación
   if (!service || !desc || !origin || !dest || !name || !phone || !originCoords || !destinationCoords) {
     feedback.textContent = "Por favor completa todos los campos y selecciona los puntos en el mapa.";
     feedback.style.color = "red";
@@ -280,9 +278,11 @@ Notas: ${notes || 'Sin notas'}
 Precio base: $${service.precio_base}
 Horario servicio: ${service.horario}
 `;
+
+  // Guarda el pedido localmente
   let pedidos = JSON.parse(localStorage.getItem("fastgoPedidos") || "[]");
   let pedidoID = "FG" + Date.now().toString().slice(-6);
-  pedidos.push({id:pedidoID, nombre, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
+  pedidos.push({id:pedidoID, nombre:name, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
   localStorage.setItem("fastgoPedidos", JSON.stringify(pedidos));
 
   let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
