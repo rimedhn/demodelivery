@@ -1,7 +1,41 @@
-// Menú principal tipo app y navegación de categorías
+// ===================
+// FastGo sitio delivery/mandados con Google Sheets y menú/tab moderno
+// ===================
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv';
+const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv';
+
 let services = [];
 let categories = [];
 let selectedCategory = null;
+
+function parseCSV(csv) {
+  const rows = csv.trim().split('\n');
+  const parseRow = row => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"' && (i === 0 || row[i - 1] !== '\\')) {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.replace(/^"|"$/g, ''));
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.replace(/^"|"$/g, ''));
+    return result;
+  };
+  const header = parseRow(rows[0]);
+  return rows.slice(1).map(row => {
+    const values = parseRow(row);
+    let obj = {};
+    header.forEach((k, i) => obj[k.trim()] = values[i] ? values[i].trim() : '');
+    return obj;
+  });
+}
 
 // Render categorías como botones
 function renderCategories() {
@@ -38,7 +72,18 @@ function renderServicesInCategory(cat) {
   });
 }
 
-// Navegación y lógica de pasos secuenciales
+// Llenar el select de servicios en el pedido
+function fillServiceSelect() {
+  const select = document.getElementById("serviceType");
+  select.innerHTML = services.map(s => `<option value="${s.id}">${s.nombre} (${s.categoria})</option>`).join('');
+}
+
+// Mostrar horario
+function showSchedule() {
+  document.getElementById("schedule").innerHTML = `<strong>Horario:</strong> Lunes a sábado 9:00-21:00`;
+}
+showSchedule();
+
 function initStepper() {
   let currentStep = 1;
   const totalSteps = 4;
@@ -86,7 +131,6 @@ function initStepper() {
   updateTabs();
 }
 function validateStep(stepNum) {
-  // Validaciones simples por paso
   if(stepNum === 1) {
     if(!document.getElementById("serviceType").value || !document.getElementById("description").value.trim()) {
       alert("Selecciona el tipo de servicio y escribe la descripción.");
@@ -108,17 +152,14 @@ function validateStep(stepNum) {
   return true;
 }
 window.addEventListener('DOMContentLoaded', () => {
-  // Ocultar todas las secciones al inicio
   document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
   document.getElementById('home').style.display = 'block';
-  // Menú principal
   document.querySelectorAll('#app-menu button').forEach(btn => {
     btn.onclick = function() {
       document.querySelectorAll('#app-menu button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const sectionId = btn.getAttribute('data-section');
       document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
-      // Pedido intro/stepper
       if(sectionId === 'order-stepper') {
         if(document.getElementById('order-stepper').style.display !== 'block') {
           document.getElementById('order-intro').style.display = 'block';
@@ -132,7 +173,6 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById(sectionId).style.display = 'block';
     };
   });
-  // Iniciar pedido y tabs internos
   document.getElementById("start-order-btn").onclick = function() {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
@@ -144,34 +184,75 @@ window.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#app-menu button[data-section="order-stepper"]').classList.add('active');
     initStepper();
   };
-  // Render categorías y servicios en sección servicios
-  setTimeout(() => {
-    // Simulación de servicios y categorías
-    services = [
-      {id:'1', nombre:'Envío de comida', descripcion:'Recibe tu comida favorita en minutos.', precio_base:'90', categoria:'Alimentos', horario:'9:00-21:00'},
-      {id:'2', nombre:'Mandado farmacia', descripcion:'Recogemos tu medicina o productos.', precio_base:'60', categoria:'Farmacia', horario:'9:00-21:00'},
-      {id:'3', nombre:'Transporte personal', descripcion:'Viaja cómodo y seguro.', precio_base:'150', categoria:'Transporte', horario:'9:00-21:00'},
-      {id:'4', nombre:'Paquetería express', descripcion:'Entrega rápida de paquetes.', precio_base:'80', categoria:'Paquetería', horario:'9:00-21:00'},
-    ];
-    categories = Array.from(new Set(services.map(s=>s.categoria)));
-    selectedCategory = categories[0] || null;
-    renderCategories();
-    renderServicesInCategory(selectedCategory);
-  }, 100);
+  fetch(SHEET_URL)
+    .then(res => res.text())
+    .then(csv => {
+      services = parseCSV(csv);
+      categories = Array.from(new Set(services.map(s=>s.categoria)));
+      selectedCategory = categories[0] || null;
+      renderCategories();
+      renderServicesInCategory(selectedCategory);
+      fillServiceSelect();
+    });
+  showSchedule();
+  // Simulación: seleccionar servicio desde tarjetas
+  window.selectService = function(id) {
+    document.getElementById("order-intro").style.display = "none";
+    document.getElementById("order-stepper").style.display = "block";
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById("step-1").classList.add('active');
+    document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active','completed'));
+    document.querySelector('.step-tab[data-step="step-1"]').classList.add('active');
+    document.getElementById("serviceType").value = id;
+    initStepper();
+  };
 });
-// Simulación: seleccionar servicio desde tarjetas
-function selectService(id) {
-  document.getElementById("order-intro").style.display = "none";
-  document.getElementById("order-stepper").style.display = "block";
-  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-  document.getElementById("step-1").classList.add('active');
-  document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active','completed'));
-  document.querySelector('.step-tab[data-step="step-1"]').classList.add('active');
-  document.getElementById("serviceType").value = id;
-  initStepper();
-}
 
-// Seguimiento de pedido - salida atractiva
+// WhatsApp pedido
+document.getElementById("whatsapp-send-btn").onclick = function(e) {
+  let service = services.find(s => s.id === document.getElementById("serviceType").value);
+  let desc = document.getElementById("description").value.trim();
+  let origin = document.getElementById("origin").value.trim();
+  let dest = document.getElementById("destination").value.trim();
+  let name = document.getElementById("clientName").value.trim();
+  let phone = document.getElementById("clientPhone").value.trim();
+  let notes = document.getElementById("notes").value.trim();
+  let feedback = document.getElementById("orderFeedback");
+  feedback.textContent = "";
+
+  if (!service || !desc || !origin || !dest || !name || !phone) {
+    feedback.textContent = "Por favor completa todos los campos y selecciona los puntos en el mapa.";
+    feedback.style.color = "red";
+    return;
+  }
+
+  let msg =
+`*Pedido FastGo*
+Nombre: ${name}
+Teléfono: ${phone}
+Servicio: ${service.nombre} (${service.categoria})
+Descripción: ${desc}
+
+Origen: ${origin}
+Destino: ${dest}
+
+Notas: ${notes || 'Sin notas'}
+Precio base: $${service.precio_base}
+Horario servicio: ${service.horario}
+`;
+
+  let pedidos = JSON.parse(localStorage.getItem("fastgoPedidos") || "[]");
+  let pedidoID = "FG" + Date.now().toString().slice(-6);
+  pedidos.push({id:pedidoID, nombre, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
+  localStorage.setItem("fastgoPedidos", JSON.stringify(pedidos));
+
+  let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
+  window.open(waUrl, "_blank");
+  feedback.textContent = "¡Pedido generado y listo para enviar por WhatsApp!";
+  feedback.style.color = "green";
+};
+
+// Seguimiento de pedido - salida atractiva con Google Sheets
 document.getElementById("track-form").onsubmit = function(e) {
   e.preventDefault();
   let id = document.getElementById("trackId").value.trim();
@@ -183,26 +264,34 @@ document.getElementById("track-form").onsubmit = function(e) {
     result.style.color = "red";
     return;
   }
-  // Simulación de respuesta atractiva
-  setTimeout(()=>{
-    if(id === "FG123456") {
-      result.innerHTML = `
-        <div class="track-status"><i class="fas fa-check-circle"></i> Entregado</div>
-        <div class="track-label">Servicio:</div>
-        <div class="track-value">Envío de comida</div>
-        <div class="track-label">Fecha:</div>
-        <div class="track-value">2025-08-06</div>
-        <div class="track-label">Notas:</div>
-        <div class="track-value">Gracias por confiar en nosotros.</div>
-      `;
-      result.classList.add('visible');
-      result.style.color = "#254d24";
-    } else {
-      result.innerHTML = "<span class='track-label'>Pedido no encontrado.</span>";
+  fetch(ORDER_SHEET_URL)
+    .then(res=>res.text())
+    .then(csv=>{
+      let pedidos = parseCSV(csv);
+      let pedido = pedidos.find(p=>p.id_pedido === id);
+      if (!pedido) {
+        result.innerHTML = "<span class='track-label'>Pedido no encontrado.</span>";
+        result.classList.add('visible');
+        result.style.color = "red";
+      } else {
+        result.innerHTML = `
+          <div class="track-status">${pedido.estado ? pedido.estado : "En proceso"}</div>
+          <div class="track-label">Servicio:</div>
+          <div class="track-value">${pedido.servicio || ''}</div>
+          <div class="track-label">Fecha:</div>
+          <div class="track-value">${pedido.fecha || ''}</div>
+          <div class="track-label">Notas:</div>
+          <div class="track-value">${pedido.notas || ''}</div>
+        `;
+        result.classList.add('visible');
+        result.style.color = "#254d24";
+      }
+    })
+    .catch(()=>{
+      result.innerHTML = "<span class='track-label'>Error consultando el estado. Inténtalo más tarde.</span>";
       result.classList.add('visible');
       result.style.color = "red";
-    }
-  },700);
+    });
 };
 
 // Preguntas frecuentes: mostrar respuesta visual
