@@ -6,13 +6,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 </head>
 <body>
   <!-- Menú interactivo tipo app -->
   <nav id="app-menu" class="app-menu">
     <button data-section="services"><i class="fas fa-list"></i><span>Servicios</span></button>
     <button data-section="order-stepper"><i class="fas fa-bolt"></i><span>Solicitar</span></button>
-    <button data-section="home" class="active"><i class="fas fa-home"></i><span>Inicio</span></button>
+    <button data-section="home" class="active" style="order:3"><i class="fas fa-home"></i><span>Inicio</span></button>
     <button data-section="track"><i class="fas fa-search-location"></i><span>Mi Pedido</span></button>
     <button data-section="faq"><i class="fas fa-question-circle"></i><span>FAQ</span></button>
     <button data-section="gallery"><i class="fas fa-image"></i><span>Galería</span></button>
@@ -64,6 +65,11 @@
           <div class="form-group">
             <label for="origin">Dirección de origen</label>
             <input id="origin" required autocomplete="off" placeholder="Ejemplo: Calle 123, Colonia, Ciudad">
+            <div id="origin-suggestions" class="suggestions"></div>
+          </div>
+          <div class="form-group">
+            <label>Punto de origen (selecciona en el mapa)</label>
+            <div id="mapOrigin" class="map"></div>
           </div>
           <button type="button" class="btn-back" id="back-step-2"><i class="fas fa-arrow-left"></i> Volver</button>
           <button type="button" class="btn-stepper next-step" id="next-step-2">Continuar <i class="fas fa-arrow-right"></i></button>
@@ -73,6 +79,11 @@
           <div class="form-group">
             <label for="destination">Dirección de destino</label>
             <input id="destination" required autocomplete="off" placeholder="Ejemplo: Calle 456, Colonia, Ciudad">
+            <div id="destination-suggestions" class="suggestions"></div>
+          </div>
+          <div class="form-group">
+            <label>Punto de destino (selecciona en el mapa)</label>
+            <div id="mapDestination" class="map"></div>
           </div>
           <button type="button" class="btn-back" id="back-step-3"><i class="fas fa-arrow-left"></i> Volver</button>
           <button type="button" class="btn-stepper next-step" id="next-step-3">Continuar <i class="fas fa-arrow-right"></i></button>
@@ -166,6 +177,7 @@
       <span>Sitio desarrollado por rimedhn.</span>
     </div>
   </footer>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
