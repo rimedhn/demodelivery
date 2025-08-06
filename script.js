@@ -1,13 +1,19 @@
-// Google Sheets config
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv';
 const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv';
 let services = [];
 let categories = [];
 let selectedCategory = null;
-// Maps
 let userLocation = [15.7758, -86.7822];
 let originCoords = null, destinationCoords = null;
 let originMapInstance = null, destinationMapInstance = null;
+
+function customAlert(msg, type="error") {
+  const alertBox = document.getElementById("customAlert");
+  alertBox.textContent = msg;
+  alertBox.className = "custom-alert " + type;
+  alertBox.style.display = "block";
+  setTimeout(()=>{ alertBox.style.display = "none"; }, 2500);
+}
 
 function parseCSV(csv) {
   const rows = csv.trim().split('\n');
@@ -77,7 +83,6 @@ function showSchedule() {
 }
 showSchedule();
 
-// MAPAS Y AUTOCOMPLETADO
 function initUserLocation(cb) {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -94,13 +99,10 @@ function initUserLocation(cb) {
 function createDynamicMap(mapId, inputId, suggestionsId, coordsCallback, markerDefaultCoords) {
   setTimeout(() => {
     const map = L.map(mapId).setView(markerDefaultCoords, 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
     let marker = L.marker(markerDefaultCoords, {draggable:true}).addTo(map);
     coordsCallback(markerDefaultCoords);
 
-    // Autocompletar
     const input = document.getElementById(inputId);
     const suggBox = document.getElementById(suggestionsId);
 
@@ -163,7 +165,6 @@ function getReverseAddress(lat, lng, cb) {
     .then(data=>cb(data.display_name || `${lat},${lng}`));
 }
 
-// FLUJO DE PEDIDO POR PASOS
 function initStepper() {
   let currentStep = 1;
   const totalSteps = 4;
@@ -182,7 +183,6 @@ function initStepper() {
       if(i === currentStep) step.classList.add('active');
       else step.classList.remove('active');
     }
-    // Mapa en paso 2 y 3
     if(currentStep === 2 && originMapInstance) setTimeout(()=>originMapInstance.invalidateSize(),100);
     if(currentStep === 3 && destinationMapInstance) setTimeout(()=>destinationMapInstance.invalidateSize(),100);
   }
@@ -212,23 +212,22 @@ function initStepper() {
   }
   updateTabs();
 }
-
 function validateStep(stepNum) {
   if(stepNum === 1) {
     if(!document.getElementById("serviceType").value || !document.getElementById("description").value.trim()) {
-      alert("Selecciona el tipo de servicio y escribe la descripción.");
+      customAlert("Selecciona el tipo de servicio y escribe la descripción.", "error");
       return false;
     }
   }
   if(stepNum === 2) {
     if(!document.getElementById("origin").value.trim() || !originCoords) {
-      alert("Indica la dirección y selecciona el punto de origen en el mapa.");
+      customAlert("Indica la dirección y selecciona el punto de origen en el mapa.", "error");
       return false;
     }
   }
   if(stepNum === 3) {
     if(!document.getElementById("destination").value.trim() || !destinationCoords) {
-      alert("Indica la dirección y selecciona el punto de destino en el mapa.");
+      customAlert("Indica la dirección y selecciona el punto de destino en el mapa.", "error");
       return false;
     }
   }
@@ -245,25 +244,22 @@ window.addEventListener('DOMContentLoaded', () => {
       btn.classList.add('active');
       const sectionId = btn.getAttribute('data-section');
       document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
-      // Categorías y servicios sólo si NO está en el proceso
       if(sectionId === 'services') {
         document.getElementById('services').style.display = 'block';
-        document.getElementById('categories-list').style.display = 'flex';
-        document.getElementById('services-in-category').style.display = 'flex';
       } else {
-        document.getElementById('categories-list').style.display = 'none';
-        document.getElementById('services-in-category').style.display = 'none';
+        document.getElementById('services').style.display = 'none';
       }
-      // Pedido: intro/stepper
       if(sectionId === 'order-stepper') {
         if(document.getElementById('order-stepper').style.display !== 'block') {
           document.getElementById('order-intro').style.display = 'block';
           document.getElementById('order-stepper').style.display = 'none';
+          document.getElementById('services').style.display = 'none';
           return;
         }
       }
       if(sectionId === 'order-intro') {
         document.getElementById('order-intro').style.display = 'block';
+        document.getElementById('services').style.display = 'none';
       }
       if(sectionId !== 'services') document.getElementById(sectionId).style.display = 'block';
     };
@@ -271,14 +267,13 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById("start-order-btn").onclick = function() {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
+    document.getElementById('services').style.display = 'none';
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     document.getElementById("step-1").classList.add('active');
     document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active','completed'));
     document.querySelector('.step-tab[data-step="step-1"]').classList.add('active');
     document.querySelectorAll('#app-menu button').forEach(b => b.classList.remove('active'));
     document.querySelector('#app-menu button[data-section="order-stepper"]').classList.add('active');
-    document.getElementById('categories-list').style.display = 'none';
-    document.getElementById('services-in-category').style.display = 'none';
     initStepper();
     initUserLocation(loc => {
       createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
@@ -295,21 +290,18 @@ window.addEventListener('DOMContentLoaded', () => {
       renderCategories();
       renderServicesInCategory(selectedCategory);
       fillServiceSelect();
-      document.getElementById('categories-list').style.display = 'flex';
-      document.getElementById('services-in-category').style.display = 'flex';
     });
   showSchedule();
 
   window.selectService = function(id) {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
+    document.getElementById('services').style.display = 'none';
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     document.getElementById("step-1").classList.add('active');
     document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active','completed'));
     document.querySelector('.step-tab[data-step="step-1"]').classList.add('active');
     document.getElementById("serviceType").value = id;
-    document.getElementById('categories-list').style.display = 'none';
-    document.getElementById('services-in-category').style.display = 'none';
     initStepper();
     initUserLocation(loc => {
       createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
@@ -318,7 +310,6 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 });
 
-// WhatsApp pedido
 document.getElementById("whatsapp-send-btn").onclick = function(e) {
   let service = services.find(s => s.id === document.getElementById("serviceType").value);
   let desc = document.getElementById("description").value.trim();
@@ -331,8 +322,7 @@ document.getElementById("whatsapp-send-btn").onclick = function(e) {
   feedback.textContent = "";
 
   if (!service || !desc || !origin || !dest || !name || !phone || !originCoords || !destinationCoords) {
-    feedback.textContent = "Por favor completa todos los campos y selecciona los puntos en el mapa.";
-    feedback.style.color = "red";
+    customAlert("Por favor completa todos los campos y selecciona los puntos en el mapa.", "error");
     return;
   }
 
@@ -361,11 +351,11 @@ Horario servicio: ${service.horario}
 
   let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
   window.open(waUrl, "_blank");
+  customAlert("¡Pedido generado y listo para enviar por WhatsApp!", "success");
   feedback.textContent = "¡Pedido generado y listo para enviar por WhatsApp!";
   feedback.style.color = "green";
 };
 
-// Seguimiento de pedido - salida atractiva con Google Sheets
 document.getElementById("track-form").onsubmit = function(e) {
   e.preventDefault();
   let id = document.getElementById("trackId").value.trim();
@@ -407,7 +397,6 @@ document.getElementById("track-form").onsubmit = function(e) {
     });
 };
 
-// FAQ visual
 document.querySelectorAll('.faq-list details').forEach(det => {
   det.addEventListener('toggle', function() {
     if(det.open) det.style.background = '#e6f9ee';
