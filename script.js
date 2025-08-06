@@ -1,6 +1,4 @@
-// ===================
-// FastGo sitio delivery/mandados con Google Sheets y menú/tab moderno
-// ===================
+// === CONFIGURACION GOOGLE SHEETS ===
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv';
 const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv';
 
@@ -8,6 +6,7 @@ let services = [];
 let categories = [];
 let selectedCategory = null;
 
+// === CSV PARSER ===
 function parseCSV(csv) {
   const rows = csv.trim().split('\n');
   const parseRow = row => {
@@ -37,7 +36,7 @@ function parseCSV(csv) {
   });
 }
 
-// Render categorías como botones
+// === CATEGORIAS Y SERVICIOS ===
 function renderCategories() {
   const catsDiv = document.getElementById('categories-list');
   catsDiv.innerHTML = '';
@@ -53,8 +52,6 @@ function renderCategories() {
     catsDiv.appendChild(btn);
   });
 }
-
-// Render servicios individuales de la categoría seleccionada
 function renderServicesInCategory(cat) {
   const svcDiv = document.getElementById('services-in-category');
   svcDiv.innerHTML = '';
@@ -71,19 +68,106 @@ function renderServicesInCategory(cat) {
     svcDiv.appendChild(card);
   });
 }
-
-// Llenar el select de servicios en el pedido
 function fillServiceSelect() {
   const select = document.getElementById("serviceType");
   select.innerHTML = services.map(s => `<option value="${s.id}">${s.nombre} (${s.categoria})</option>`).join('');
 }
-
-// Mostrar horario
 function showSchedule() {
   document.getElementById("schedule").innerHTML = `<strong>Horario:</strong> Lunes a sábado 9:00-21:00`;
 }
 showSchedule();
 
+// === MAPAS Y AUTOCOMPLETADO ===
+let userLocation = [15.7758, -86.7822];
+let originCoords = null, destinationCoords = null;
+let originMapInstance = null, destinationMapInstance = null;
+
+function initUserLocation(cb) {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        userLocation = [pos.coords.latitude, pos.coords.longitude];
+        cb && cb(userLocation);
+      },
+      err => { cb && cb(userLocation); }
+    );
+  } else {
+    cb && cb(userLocation);
+  }
+}
+function createDynamicMap(mapId, inputId, suggestionsId, coordsCallback, markerDefaultCoords) {
+  setTimeout(() => {
+    const map = L.map(mapId).setView(markerDefaultCoords, 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+    }).addTo(map);
+    let marker = L.marker(markerDefaultCoords, {draggable:true}).addTo(map);
+    coordsCallback(markerDefaultCoords);
+
+    // Autocompletar
+    const input = document.getElementById(inputId);
+    const suggBox = document.getElementById(suggestionsId);
+
+    let timeoutAC = null;
+    input.addEventListener('input', function() {
+      clearTimeout(timeoutAC);
+      const query = input.value.trim();
+      if (!query) { suggBox.innerHTML = ""; return; }
+      timeoutAC = setTimeout(() => {
+        let lat = userLocation[0], lng = userLocation[1];
+        let bbox = `${lng-0.08},${lat-0.08},${lng+0.08},${lat+0.08}`;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=7&q=${encodeURIComponent(query)}&viewbox=${bbox}&bounded=1`)
+          .then(res => res.json())
+          .then(results => {
+            suggBox.innerHTML = "";
+            if (results.length === 0) return;
+            results.forEach((r, idx) => {
+              const item = document.createElement("div");
+              item.className = 'suggestion-item' + (idx === 0 ? ' active' : '');
+              let icon = 'fa-map-pin';
+              if (r.type === "city" || r.type === "administrative") icon = 'fa-city';
+              if (r.type === "road") icon = 'fa-road';
+              if (r.type === "house" || r.type === "residential") icon = 'fa-home';
+              item.innerHTML = `
+                <span class="suggestion-icon"><i class="fas ${icon}"></i></span>
+                <span class="suggestion-name">${r.display_name.split(",")[0]}</span>
+                <span class="suggestion-details">${r.display_name}</span>
+              `;
+              item.onclick = () => {
+                input.value = r.display_name;
+                suggBox.innerHTML = "";
+                map.setView([r.lat, r.lon], 17);
+                marker.setLatLng([r.lat, r.lon]);
+                coordsCallback([parseFloat(r.lat), parseFloat(r.lon)]);
+              };
+              suggBox.appendChild(item);
+            });
+          });
+      }, 350);
+    });
+    map.on('click', function(e) {
+      marker.setLatLng(e.latlng);
+      coordsCallback([e.latlng.lat, e.latlng.lng]);
+      getReverseAddress(e.latlng.lat, e.latlng.lng, val => { input.value = val; });
+    });
+    marker.on('dragend', function(ev) {
+      const pos = marker.getLatLng();
+      coordsCallback([pos.lat, pos.lng]);
+      getReverseAddress(pos.lat, pos.lng, val => { input.value = val; });
+    });
+    input.addEventListener('blur', function() { setTimeout(()=>suggBox.innerHTML="", 150); });
+    map.invalidateSize();
+    if(mapId === 'mapOrigin') originMapInstance = map;
+    if(mapId === 'mapDestination') destinationMapInstance = map;
+  }, 200);
+}
+function getReverseAddress(lat, lng, cb) {
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    .then(r=>r.json())
+    .then(data=>cb(data.display_name || `${lat},${lng}`));
+}
+
+// === FLUJO DE PEDIDO POR PASOS ===
 function initStepper() {
   let currentStep = 1;
   const totalSteps = 4;
@@ -102,6 +186,9 @@ function initStepper() {
       if(i === currentStep) step.classList.add('active');
       else step.classList.remove('active');
     }
+    // Mapa en paso 2 y 3
+    if(currentStep === 2 && originMapInstance) setTimeout(()=>originMapInstance.invalidateSize(),100);
+    if(currentStep === 3 && destinationMapInstance) setTimeout(()=>destinationMapInstance.invalidateSize(),100);
   }
   document.querySelectorAll('.step-tab').forEach(tab => {
     tab.onclick = function() {
@@ -119,7 +206,6 @@ function initStepper() {
         updateTabs();
       }
     };
-    // Botón "Volver" en cada paso (excepto el primero)
     let backBtn = document.getElementById(`back-step-${i+1}`);
     if(backBtn) {
       backBtn.onclick = function() {
@@ -130,6 +216,7 @@ function initStepper() {
   }
   updateTabs();
 }
+
 function validateStep(stepNum) {
   if(stepNum === 1) {
     if(!document.getElementById("serviceType").value || !document.getElementById("description").value.trim()) {
@@ -138,19 +225,20 @@ function validateStep(stepNum) {
     }
   }
   if(stepNum === 2) {
-    if(!document.getElementById("origin").value.trim()) {
-      alert("Indica la dirección y selecciona el punto de origen.");
+    if(!document.getElementById("origin").value.trim() || !originCoords) {
+      alert("Indica la dirección y selecciona el punto de origen en el mapa.");
       return false;
     }
   }
   if(stepNum === 3) {
-    if(!document.getElementById("destination").value.trim()) {
-      alert("Indica la dirección y selecciona el punto de destino.");
+    if(!document.getElementById("destination").value.trim() || !destinationCoords) {
+      alert("Indica la dirección y selecciona el punto de destino en el mapa.");
       return false;
     }
   }
   return true;
 }
+
 window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
   document.getElementById('home').style.display = 'block';
@@ -183,6 +271,11 @@ window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#app-menu button').forEach(b => b.classList.remove('active'));
     document.querySelector('#app-menu button[data-section="order-stepper"]').classList.add('active');
     initStepper();
+    // Inicializa mapas en pasos 2 y 3
+    initUserLocation(loc => {
+      createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
+      createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
+    });
   };
   fetch(SHEET_URL)
     .then(res => res.text())
@@ -195,7 +288,6 @@ window.addEventListener('DOMContentLoaded', () => {
       fillServiceSelect();
     });
   showSchedule();
-  // Simulación: seleccionar servicio desde tarjetas
   window.selectService = function(id) {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
@@ -205,6 +297,10 @@ window.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.step-tab[data-step="step-1"]').classList.add('active');
     document.getElementById("serviceType").value = id;
     initStepper();
+    initUserLocation(loc => {
+      createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
+      createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
+    });
   };
 });
 
@@ -220,7 +316,7 @@ document.getElementById("whatsapp-send-btn").onclick = function(e) {
   let feedback = document.getElementById("orderFeedback");
   feedback.textContent = "";
 
-  if (!service || !desc || !origin || !dest || !name || !phone) {
+  if (!service || !desc || !origin || !dest || !name || !phone || !originCoords || !destinationCoords) {
     feedback.textContent = "Por favor completa todos los campos y selecciona los puntos en el mapa.";
     feedback.style.color = "red";
     return;
@@ -234,7 +330,10 @@ Servicio: ${service.nombre} (${service.categoria})
 Descripción: ${desc}
 
 Origen: ${origin}
+Ubicación: https://maps.google.com/?q=${originCoords[0]},${originCoords[1]}
+
 Destino: ${dest}
+Ubicación: https://maps.google.com/?q=${destinationCoords[0]},${destinationCoords[1]}
 
 Notas: ${notes || 'Sin notas'}
 Precio base: $${service.precio_base}
@@ -294,7 +393,7 @@ document.getElementById("track-form").onsubmit = function(e) {
     });
 };
 
-// Preguntas frecuentes: mostrar respuesta visual
+// FAQ visual
 document.querySelectorAll('.faq-list details').forEach(det => {
   det.addEventListener('toggle', function() {
     if(det.open) det.style.background = '#e6f9ee';
