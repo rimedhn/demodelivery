@@ -1,4 +1,4 @@
-/* Menú tipo app y distribución atractiva para móvil y web */
+/* Menú tipo app */
 .app-menu {
   position: fixed;
   bottom: 0;
@@ -149,7 +149,7 @@
   font-size: 1.07em;
 }
 
-/* Distribución para web de servicios y categorías */
+/* Categorías y servicios - responsivo */
 .categories-list {
   display: flex;
   flex-wrap: wrap;
