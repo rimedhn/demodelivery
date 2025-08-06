@@ -1,6 +1,7 @@
 // ==============================
 // FastGo sitio delivery/mandados
 // Flujo por pasos, geolocalización, autocompletado dinámico
+// Corrección: WhatsApp abre siempre, seguimiento toma datos correctos
 // ==============================
 
 function toggleMenu() {
@@ -23,12 +24,31 @@ let services = [];
 let categories = new Set();
 
 function parseCSV(csv) {
-  const [header, ...rows] = csv.trim().split('\n');
-  const keys = header.split(',');
-  return rows.map(row => {
-    const values = row.split(',');
+  // Maneja comas dentro de campos con comillas
+  const rows = csv.trim().split('\n');
+  const parseRow = row => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"' && (i === 0 || row[i - 1] !== '\\')) {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.replace(/^"|"$/g, ''));
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.replace(/^"|"$/g, ''));
+    return result;
+  };
+  const header = parseRow(rows[0]);
+  return rows.slice(1).map(row => {
+    const values = parseRow(row);
     let obj = {};
-    keys.forEach((k, i) => obj[k.trim()] = values[i] ? values[i].trim() : '');
+    header.forEach((k, i) => obj[k.trim()] = values[i] ? values[i].trim() : '');
     return obj;
   });
 }
@@ -229,6 +249,7 @@ document.getElementById("order-stepper-form").onsubmit = function(e) {
   let notes = document.getElementById("notes").value.trim();
   let feedback = document.getElementById("orderFeedback");
   feedback.textContent = "";
+
   if (!service || !desc || !origin || !dest || !name || !phone || !originCoords || !destinationCoords) {
     feedback.textContent = "Por favor completa todos los campos y selecciona los puntos en el mapa.";
     feedback.style.color = "red";
@@ -258,12 +279,11 @@ Horario servicio: ${service.horario}
   pedidos.push({id:pedidoID, nombre, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
   localStorage.setItem("fastgoPedidos", JSON.stringify(pedidos));
 
+  // --- Envía a WhatsApp de inmediato (¡no uses setTimeout aquí!)
   let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
-  setTimeout(() => {
-    window.open(waUrl, "_blank");
-    feedback.textContent = "¡Pedido generado y listo para enviar por WhatsApp!";
-    feedback.style.color = "green";
-  }, 800);
+  window.open(waUrl, "_blank");
+  feedback.textContent = "¡Pedido generado y listo para enviar por WhatsApp!";
+  feedback.style.color = "green";
 };
 
 // === Seguimiento de pedido ===
@@ -276,19 +296,25 @@ document.getElementById("track-form").onsubmit = function(e) {
     .then(res=>res.text())
     .then(csv=>{
       let pedidos = parseCSV(csv);
-      let pedido = pedidos.find(p=>p.id_pedido===id);
+      // Busca por encabezado, no por posición
+      let pedido = pedidos.find(p=>p.id_pedido === id);
       if (!pedido) {
         result.textContent = "Pedido no encontrado.";
         result.style.color = "red";
       } else {
+        // Muestra correctamente los campos
         result.innerHTML = `
-          <span><strong>Estado:</strong> ${pedido.estado}</span><br>
-          <span><strong>Servicio:</strong> ${pedido.servicio}</span><br>
-          <span><strong>Fecha:</strong> ${pedido.fecha}</span><br>
-          <span><strong>Notas:</strong> ${pedido.notas||''}</span>
+          <span><strong>Estado:</strong> ${pedido.estado || ''}</span><br>
+          <span><strong>Servicio:</strong> ${pedido.servicio || ''}</span><br>
+          <span><strong>Fecha:</strong> ${pedido.fecha || ''}</span><br>
+          <span><strong>Notas:</strong> ${pedido.notas || ''}</span>
         `;
         result.style.color = "#333";
       }
+    })
+    .catch(()=>{
+      result.textContent = "Error consultando el estado. Inténtalo más tarde.";
+      result.style.color = "red";
     });
 };
 
