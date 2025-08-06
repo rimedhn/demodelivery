@@ -291,32 +291,44 @@ Horario servicio: ${service.horario}
   feedback.style.color = "green";
 };
 
-// === Seguimiento de pedido ===
+// Seguimiento de pedido - salida atractiva
 document.getElementById("track-form").onsubmit = function(e) {
   e.preventDefault();
   let id = document.getElementById("trackId").value.trim();
   let result = document.getElementById("trackResult");
-  if (!id) {result.textContent = "Ingresa tu ID de pedido."; result.style.color = "red"; return;}
+  result.classList.remove('visible');
+  if (!id) {
+    result.innerHTML = "<span class='track-label'>Ingresa tu ID de pedido.</span>";
+    result.classList.add('visible');
+    result.style.color = "red";
+    return;
+  }
   fetch(ORDER_SHEET_URL)
     .then(res=>res.text())
     .then(csv=>{
       let pedidos = parseCSV(csv);
       let pedido = pedidos.find(p=>p.id_pedido === id);
       if (!pedido) {
-        result.textContent = "Pedido no encontrado.";
+        result.innerHTML = "<span class='track-label'>Pedido no encontrado.</span>";
+        result.classList.add('visible');
         result.style.color = "red";
       } else {
         result.innerHTML = `
-          <span><strong>Estado:</strong> ${pedido.estado || ''}</span><br>
-          <span><strong>Servicio:</strong> ${pedido.servicio || ''}</span><br>
-          <span><strong>Fecha:</strong> ${pedido.fecha || ''}</span><br>
-          <span><strong>Notas:</strong> ${pedido.notas || ''}</span>
+          <div class="track-status">${pedido.estado ? pedido.estado : "En proceso"}</div>
+          <div class="track-label">Servicio:</div>
+          <div class="track-value">${pedido.servicio || ''}</div>
+          <div class="track-label">Fecha:</div>
+          <div class="track-value">${pedido.fecha || ''}</div>
+          <div class="track-label">Notas:</div>
+          <div class="track-value">${pedido.notas || ''}</div>
         `;
-        result.style.color = "#333";
+        result.classList.add('visible');
+        result.style.color = "#254d24";
       }
     })
     .catch(()=>{
-      result.textContent = "Error consultando el estado. Inténtalo más tarde.";
+      result.innerHTML = "<span class='track-label'>Error consultando el estado. Inténtalo más tarde.</span>";
+      result.classList.add('visible');
       result.style.color = "red";
     });
 };
