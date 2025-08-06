@@ -1,7 +1,7 @@
 // ==============================
 // FastGo sitio delivery/mandados
 // Flujo por pasos, geolocalización, autocompletado dinámico
-// Ajustes: ubicación por defecto La Ceiba, mapas más grandes, fix mapas invisibles, WhatsApp directo
+// Ajuste: envío WhatsApp inmediato al click, mapa grande y visible, La Ceiba por defecto
 // ==============================
 
 function toggleMenu() {
@@ -116,7 +116,6 @@ let originMapInstance = null;
 let destinationMapInstance = null;
 
 function createDynamicMap(mapId, inputId, suggestionsId, coordsCallback, markerDefaultCoords) {
-  // Espera a que el contenedor esté visible
   return new Promise((resolve) => {
     setTimeout(() => {
       const map = L.map(mapId).setView(markerDefaultCoords, 14);
@@ -246,8 +245,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // === Solicitud de servicio y WhatsApp ===
-document.getElementById("order-stepper-form").onsubmit = function(e) {
-  e.preventDefault();
+document.getElementById("whatsapp-send-btn").onclick = function(e) {
+  let form = document.getElementById("order-stepper-form");
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
   let service = services.find(s => s.id === document.getElementById("serviceType").value);
   let desc = document.getElementById("description").value.trim();
   let origin = document.getElementById("origin").value.trim();
@@ -286,7 +289,6 @@ Horario servicio: ${service.horario}
   pedidos.push({id:pedidoID, nombre, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
   localStorage.setItem("fastgoPedidos", JSON.stringify(pedidos));
 
-  // WhatsApp Honduras (La Ceiba): 50493593126
   let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
   window.open(waUrl, "_blank");
   feedback.textContent = "¡Pedido generado y listo para enviar por WhatsApp!";
