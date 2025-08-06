@@ -1,7 +1,7 @@
 // ==============================
 // FastGo sitio delivery/mandados
-// Flujo por pasos, geolocalización, autocompletado dinámico
-// Ajuste: envío WhatsApp inmediato al click, mapa grande y visible, La Ceiba por defecto
+// Corregido: WhatsApp genera el mensaje y lo abre al click
+// Ajuste: mapas visibles, La Ceiba por defecto
 // ==============================
 
 function toggleMenu() {
@@ -15,7 +15,6 @@ document.querySelectorAll('.nav a').forEach(link => {
   };
 });
 
-// === Configuración de Google Sheets ===
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv';
 const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv';
 
@@ -23,7 +22,6 @@ let services = [];
 let categories = new Set();
 
 function parseCSV(csv) {
-  // Maneja comas dentro de campos con comillas
   const rows = csv.trim().split('\n');
   const parseRow = row => {
     const result = [];
@@ -196,14 +194,12 @@ function getReverseAddress(lat, lng, cb) {
 // Variables para los puntos seleccionados
 let originCoords = null, destinationCoords = null;
 
-// Inicializar flujo por pasos y mapas
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById("order-stepper").style.display = "none";
   document.getElementById("start-order-btn").onclick = async () => {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
     document.getElementById("step-1").style.display = "block";
-    // Inicializa mapas cuando se va a usar el stepper
     initUserLocation(async loc => {
       originMapInstance = await createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
       destinationMapInstance = await createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
@@ -244,7 +240,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadServices();
 });
 
-// === Solicitud de servicio y WhatsApp ===
+// === Botón WhatsApp: genera y abre mensaje ===
 document.getElementById("whatsapp-send-btn").onclick = function(e) {
   let form = document.getElementById("order-stepper-form");
   if (!form.checkValidity()) {
