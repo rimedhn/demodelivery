@@ -60,9 +60,89 @@
 }
 main {
   padding-bottom: 80px;
+  min-height: 100vh;
+  background: linear-gradient(120deg, #f0fff0 0%, #e6f9ee 100%);
 }
 @media (min-width: 700px) {
   main { padding-top: 74px; padding-bottom: 0; }
+}
+
+/* Secciones atractivas */
+.section {
+  animation: fadeIn .25s;
+  margin: 0 auto;
+  max-width: 440px;
+  box-sizing: border-box;
+  padding: 20px 12px 12px 12px;
+  background: #fff;
+  border-radius: 18px 18px 18px 18px;
+  box-shadow: 0 6px 32px rgba(76,175,80,0.07), 0 1px 1px rgba(0,0,0,0.07);
+  margin-bottom: 18px;
+  min-height: 170px;
+}
+@media (max-width: 560px) {
+  .section { max-width: 98vw; }
+}
+.section h1, .section h2 {
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  font-size: 1.45em;
+  font-weight: 700;
+  color: #222;
+  margin-top: 0;
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+}
+.section h1 i, .section h2 i { margin-right: 6px; color: #4caf50; }
+.section p, .section label, .section span, .section figcaption {
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  font-size: 1.05em;
+  color: #444;
+  margin-bottom: 7px;
+  line-height: 1.6;
+}
+.section .schedule {
+  background: #e6f9ee;
+  color: #217a35;
+  padding: 7px 13px;
+  border-radius: 9px;
+  box-shadow: 0 1px 3px rgba(76,175,80,0.09);
+  font-weight: 500;
+  margin-bottom: 10px;
+  font-size: 1.07em;
+}
+
+/* Servicios atractivos */
+.service-list { margin-top: 10px; }
+.service-card {
+  background: #f7fdf7;
+  border-radius: 14px;
+  box-shadow: 0 2px 14px rgba(76,175,80,0.09);
+  margin-bottom: 13px;
+  padding: 12px 13px;
+  transition: box-shadow 0.17s;
+  border: 1px solid #e2f5e2;
+}
+.service-card:hover {
+  box-shadow: 0 4px 22px rgba(76,175,80,0.18);
+  border-color: #b2fab4;
+}
+.service-card h3 {
+  color: #1b8d40;
+  font-size: 1.13em;
+  margin: 0 0 5px 0;
+  letter-spacing: 0.02em;
+}
+.service-card strong {
+  color: #222;
+  font-size: 1.05em;
+}
+.service-card span {
+  display: block;
+  color: #444;
+  font-size: 0.99em;
+  margin-bottom: 2px;
 }
 
 /* Tabs internos del pedido */
@@ -129,7 +209,10 @@ main {
   max-width: 340px;
   margin-left: auto;
   margin-right: auto;
+  text-align: left;
+  display: none;
 }
+.track-result-card.visible { display: block; }
 .track-result-card strong { color: #1b8d40; font-size: 19px; }
 .track-result-card .track-status {
   display: inline-block;
@@ -140,10 +223,63 @@ main {
   border-radius: 8px;
   padding: 2px 12px;
   margin-bottom: 7px;
+  margin-top: 3px;
+}
+.track-result-card .track-label {
+  font-weight: 500;
+  color: #217a35;
+  font-size: 1em;
+  margin-top: 2px;
+}
+.track-result-card .track-value {
+  color: #254d24;
+  font-size: 1.01em;
+  margin-bottom: 9px;
+  margin-top: 2px;
 }
 
-.section {
-  animation: fadeIn .25s;
+.faq-list details {
+  background: #f7fdf7;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 9px 14px;
+  box-shadow: 0 2px 9px rgba(76,175,80,0.04);
+}
+.faq-list summary { color: #267a4c; font-weight: 600; font-size: 1.08em;}
+
+.gallery {
+  display: flex; flex-wrap: wrap; gap: 13px; margin-top: 7px;
+  justify-content: center;
+}
+.gallery figure {
+  background: #f3fff3;
+  border-radius: 14px;
+  box-shadow: 0 2px 14px rgba(76,175,80,0.07);
+  padding: 7px 7px 13px 7px;
+  max-width: 180px;
+  margin: 0;
+}
+.gallery img {
+  border-radius: 11px;
+  max-width: 100%;
+  box-shadow: 0 2px 8px rgba(76,175,80,0.12);
+}
+.gallery figcaption {
+  font-size: 0.99em;
+  color: #267a4c;
+  margin-top: 3px;
+  text-align: center;
+}
+
+footer {
+  background: #23272f;
+  color: #ddd;
+  text-align: center;
+  padding: 14px 0 22px 0;
+  font-size: 1em;
+  border-top: 1px solid #1b8d40;
+  border-radius: 22px 22px 0 0;
+  margin-top: 18px;
 }
 
 @keyframes fadeIn {
@@ -154,4 +290,13 @@ main {
 .map { height: 350px; border-radius: 10px; margin-bottom: .7em; width:100%; }
 @media (max-width:700px) {
   .map { height: 220px; }
+}
+
+/* Animación de boton de whatsapp */
+.btn-submit i.fab.fa-whatsapp {
+  animation: wa-pulse 1.2s infinite;
+}
+@keyframes wa-pulse {
+  0%,100% { color: #25d366; transform: scale(1);}
+  50% { color: #43a047; transform: scale(1.23);}
 }
