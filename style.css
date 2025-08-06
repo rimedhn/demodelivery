@@ -170,3 +170,7 @@ footer {background: #388e3c; color: #fff; text-align: center; padding: 1em 0; ma
 
 .anim-fade {animation: fadein .7s;}
 @keyframes fadein {from {opacity:0;transform:translateY(10px);} to {opacity:1;transform:translateY(0);}}
+
+.map { height: 350px; border-radius: 10px; margin-bottom: .7em; width:100%; }
+@media (max-width:700px) {
+  .map { height: 220px; }
