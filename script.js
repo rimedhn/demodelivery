@@ -2,6 +2,7 @@
 // FastGo sitio delivery/mandados
 // Flujo por pasos, geolocalización, autocompletado dinámico
 // Corrección: WhatsApp abre siempre, seguimiento toma datos correctos
+// Ajuste: ubicación por defecto La Ceiba, Honduras y enlaces/número correctos
 // ==============================
 
 function toggleMenu() {
@@ -16,9 +17,8 @@ document.querySelectorAll('.nav a').forEach(link => {
 });
 
 // === Configuración de Google Sheets ===
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv'; // <-- Tu CSV de servicios
-const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv'; // <-- CSV pedidos (opcional)
-
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=0&single=true&output=csv'; // Servicios
+const ORDER_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS98meyWBoGVu0iF5ZJmLI7hmA6bLwAZroy6oTvgNJmDi9H7p4QDIiEh8-ocJVe08LhJPD4RtAtlEGq/pub?gid=740601453&single=true&output=csv'; // Pedidos seguimiento
 
 let services = [];
 let categories = new Set();
@@ -96,7 +96,7 @@ function showSchedule() {
 showSchedule();
 
 // ==== Geolocalización y mapas dinámicos ====
-let userLocation = [19.432608, -99.133209]; // CDMX por defecto
+let userLocation = [15.7758, -86.7822]; // La Ceiba, Honduras por defecto
 function initUserLocation(cb) {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -113,73 +113,76 @@ function initUserLocation(cb) {
 
 // ==== MAPAS Y AUTOCOMPLETADO ====
 function createDynamicMap(mapId, inputId, suggestionsId, coordsCallback, markerDefaultCoords) {
-  const map = L.map(mapId).setView(markerDefaultCoords, 14);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: "",
-    maxZoom: 18,
-  }).addTo(map);
-  let marker = L.marker(markerDefaultCoords, {draggable:true}).addTo(map);
-  coordsCallback(markerDefaultCoords);
+  // Espera a que el contenedor exista y tenga tamaño
+  setTimeout(() => {
+    const map = L.map(mapId).setView(markerDefaultCoords, 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: "",
+      maxZoom: 18,
+    }).addTo(map);
+    let marker = L.marker(markerDefaultCoords, {draggable:true}).addTo(map);
+    coordsCallback(markerDefaultCoords);
 
-  // Autocompletar direcciones (Nominatim)
-  const input = document.getElementById(inputId);
-  const suggBox = document.getElementById(suggestionsId);
+    // Autocompletar direcciones (Nominatim)
+    const input = document.getElementById(inputId);
+    const suggBox = document.getElementById(suggestionsId);
 
-  let timeoutAC = null;
-  input.addEventListener('input', function() {
-    clearTimeout(timeoutAC);
-    const query = input.value.trim();
-    if (!query) { suggBox.innerHTML = ""; return; }
-    timeoutAC = setTimeout(() => {
-      // Nominatim con viewbox centrado en userLocation
-      let lat = userLocation[0], lng = userLocation[1];
-      let bbox = `${lng-0.08},${lat-0.08},${lng+0.08},${lat+0.08}`;
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=7&q=${encodeURIComponent(query)}&viewbox=${bbox}&bounded=1`)
-        .then(res => res.json())
-        .then(results => {
-          suggBox.innerHTML = "";
-          if (results.length === 0) return;
-          results.forEach((r, idx) => {
-            const item = document.createElement("div");
-            item.className = 'suggestion-item' + (idx === 0 ? ' active' : '');
-            // Icono por tipo
-            let icon = 'fa-map-pin';
-            if (r.type === "city" || r.type === "administrative") icon = 'fa-city';
-            if (r.type === "road") icon = 'fa-road';
-            if (r.type === "house" || r.type === "residential") icon = 'fa-home';
-            item.innerHTML = `
-              <span class="suggestion-icon"><i class="fas ${icon}"></i></span>
-              <span class="suggestion-name">${r.display_name.split(",")[0]}</span>
-              <span class="suggestion-details">${r.display_name}</span>
-            `;
-            item.onclick = () => {
-              input.value = r.display_name;
-              suggBox.innerHTML = "";
-              map.setView([r.lat, r.lon], 17);
-              marker.setLatLng([r.lat, r.lon]);
-              coordsCallback([parseFloat(r.lat), parseFloat(r.lon)]);
-            };
-            suggBox.appendChild(item);
+    let timeoutAC = null;
+    input.addEventListener('input', function() {
+      clearTimeout(timeoutAC);
+      const query = input.value.trim();
+      if (!query) { suggBox.innerHTML = ""; return; }
+      timeoutAC = setTimeout(() => {
+        // Nominatim con viewbox centrado en userLocation
+        let lat = userLocation[0], lng = userLocation[1];
+        let bbox = `${lng-0.08},${lat-0.08},${lng+0.08},${lat+0.08}`;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=7&q=${encodeURIComponent(query)}&viewbox=${bbox}&bounded=1`)
+          .then(res => res.json())
+          .then(results => {
+            suggBox.innerHTML = "";
+            if (results.length === 0) return;
+            results.forEach((r, idx) => {
+              const item = document.createElement("div");
+              item.className = 'suggestion-item' + (idx === 0 ? ' active' : '');
+              // Icono por tipo
+              let icon = 'fa-map-pin';
+              if (r.type === "city" || r.type === "administrative") icon = 'fa-city';
+              if (r.type === "road") icon = 'fa-road';
+              if (r.type === "house" || r.type === "residential") icon = 'fa-home';
+              item.innerHTML = `
+                <span class="suggestion-icon"><i class="fas ${icon}"></i></span>
+                <span class="suggestion-name">${r.display_name.split(",")[0]}</span>
+                <span class="suggestion-details">${r.display_name}</span>
+              `;
+              item.onclick = () => {
+                input.value = r.display_name;
+                suggBox.innerHTML = "";
+                map.setView([r.lat, r.lon], 17);
+                marker.setLatLng([r.lat, r.lon]);
+                coordsCallback([parseFloat(r.lat), parseFloat(r.lon)]);
+              };
+              suggBox.appendChild(item);
+            });
           });
-        });
-    }, 350);
-  });
+      }, 350);
+    });
 
-  map.on('click', function(e) {
-    marker.setLatLng(e.latlng);
-    coordsCallback([e.latlng.lat, e.latlng.lng]);
-    getReverseAddress(e.latlng.lat, e.latlng.lng, val => { input.value = val; });
-  });
+    map.on('click', function(e) {
+      marker.setLatLng(e.latlng);
+      coordsCallback([e.latlng.lat, e.latlng.lng]);
+      getReverseAddress(e.latlng.lat, e.latlng.lng, val => { input.value = val; });
+    });
 
-  marker.on('dragend', function(ev) {
-    const pos = marker.getLatLng();
-    coordsCallback([pos.lat, pos.lng]);
-    getReverseAddress(pos.lat, pos.lng, val => { input.value = val; });
-  });
+    marker.on('dragend', function(ev) {
+      const pos = marker.getLatLng();
+      coordsCallback([pos.lat, pos.lng]);
+      getReverseAddress(pos.lat, pos.lng, val => { input.value = val; });
+    });
 
-  input.addEventListener('blur', function() { setTimeout(()=>suggBox.innerHTML="", 150); });
-  map.invalidateSize();
-  return map;
+    input.addEventListener('blur', function() { setTimeout(()=>suggBox.innerHTML="", 150); });
+    map.invalidateSize();
+    return map;
+  }, 150); // Da tiempo a que el elemento esté visible
 }
 
 function getReverseAddress(lat, lng, cb) {
@@ -200,6 +203,11 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById("order-intro").style.display = "none";
     document.getElementById("order-stepper").style.display = "block";
     document.getElementById("step-1").style.display = "block";
+    // Inicializa mapas cuando se va a usar el stepper (para asegurar que están visibles)
+    initUserLocation(loc => {
+      createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
+      createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
+    });
   };
 
   // Navegación de pasos
@@ -228,13 +236,8 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById("step-4").style.display = "block";
   };
 
-  // Inicializa servicios y geolocalización
+  // Inicializa servicios
   loadServices();
-  initUserLocation(loc => {
-    // Muestra pin en ubicación por defecto del dispositivo
-    createDynamicMap('mapOrigin', 'origin', 'origin-suggestions', coords => { originCoords = coords; }, loc);
-    createDynamicMap('mapDestination', 'destination', 'destination-suggestions', coords => { destinationCoords = coords; }, loc);
-  });
 });
 
 // === Solicitud de servicio y WhatsApp ===
@@ -255,8 +258,7 @@ document.getElementById("order-stepper-form").onsubmit = function(e) {
     feedback.style.color = "red";
     return;
   }
-  feedback.textContent = "Generando tu pedido...";
-  feedback.style.color = "#333";
+
   let msg =
 `*Pedido FastGo*
 Nombre: ${name}
@@ -279,7 +281,7 @@ Horario servicio: ${service.horario}
   pedidos.push({id:pedidoID, nombre, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
   localStorage.setItem("fastgoPedidos", JSON.stringify(pedidos));
 
-  // --- Envía a WhatsApp de inmediato (¡no uses setTimeout aquí!)
+  // WhatsApp Honduras (La Ceiba): 50493593126
   let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
   window.open(waUrl, "_blank");
   feedback.textContent = "¡Pedido generado y listo para enviar por WhatsApp!";
