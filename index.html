@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>FastGo - Delivery y Mandados</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg width="40" height="40" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#4caf50"/><text x="32" y="40" text-anchor="middle" fill="#fff" font-size="30" font-family="Arial" dy=".3em">🚗</text></svg>
+    </div>
+    <div class="business-name">FastGo</div>
+    <nav id="nav" class="nav">
+      <a href="#home" class="active">Inicio</a>
+      <a href="#services">Servicios</a>
+      <a href="#order-stepper">Solicitar</a>
+      <a href="#track">Mi Pedido</a>
+      <a href="#faq">FAQ</a>
+      <a href="#gallery">Galería</a>
+      <a href="#contact">Contacto</a>
+    </nav>
+    <div class="menu-icon" onclick="toggleMenu()">
+      <i class="fas fa-bars"></i>
+    </div>
+  </header>
+
+  <a href="https://wa.me/50493593126" class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+  </a>
+
+  <main>
+    <section id="home" class="section">
+      <h1>¡Tu solución rápida para delivery, mandados y transporte!</h1>
+      <p>Solicita servicios personalizados, seguimiento de pedidos y atención directa por WhatsApp.</p>
+      <div class="schedule" id="schedule"></div>
+    </section>
+
+    <section id="services" class="section">
+      <h2><i class="fas fa-list"></i> Servicios Disponibles</h2>
+      <div id="service-list" class="service-list"></div>
+    </section>
+
+    <!-- Botón grande y atractivo para iniciar solicitud -->
+    <section id="order-intro" class="section">
+      <div class="order-intro-container">
+        <button id="start-order-btn" class="start-order-btn">
+          <span><i class="fas fa-rocket"></i> Solicitar Servicio</span>
+        </button>
+        <p class="order-intro-text">¡Haz clic y vive la experiencia FastGo de pedidos personalizados!</p>
+      </div>
+    </section>
+
+    <!-- Proceso por pasos -->
+    <section id="order-stepper" class="section" style="display:none;">
+      <form id="order-stepper-form" autocomplete="off">
+        <!-- Paso 1 -->
+        <div class="step" id="step-1">
+          <h2>Paso 1: Servicio y Descripción</h2>
+          <div class="form-group">
+            <label for="serviceType">Tipo de servicio</label>
+            <select id="serviceType" required></select>
+          </div>
+          <div class="form-group">
+            <label for="description">Descripción detallada</label>
+            <textarea id="description" required placeholder="Ejemplo: Pizza pepperoni de X restaurante"></textarea>
+          </div>
+          <button type="button" class="btn-stepper" id="next-step-1">Continuar <i class="fas fa-arrow-right"></i></button>
+        </div>
+        <!-- Paso 2 -->
+        <div class="step" id="step-2" style="display:none;">
+          <h2>Paso 2: Selecciona Origen</h2>
+          <div class="form-group">
+            <label for="origin">Dirección de origen</label>
+            <input id="origin" required autocomplete="off" placeholder="Ejemplo: Calle 123, Colonia, Ciudad">
+            <div id="origin-suggestions" class="suggestions"></div>
+          </div>
+          <div class="form-group">
+            <label>Punto de origen (selecciona en el mapa)</label>
+            <div id="mapOrigin" class="map"></div>
+          </div>
+          <button type="button" class="btn-stepper" id="next-step-2">Continuar <i class="fas fa-arrow-right"></i></button>
+        </div>
+        <!-- Paso 3 -->
+        <div class="step" id="step-3" style="display:none;">
+          <h2>Paso 3: Selecciona Destino</h2>
+          <div class="form-group">
+            <label for="destination">Dirección de destino</label>
+            <input id="destination" required autocomplete="off" placeholder="Ejemplo: Calle 456, Colonia, Ciudad">
+            <div id="destination-suggestions" class="suggestions"></div>
+          </div>
+          <div class="form-group">
+            <label>Punto de destino (selecciona en el mapa)</label>
+            <div id="mapDestination" class="map"></div>
+          </div>
+          <button type="button" class="btn-stepper" id="next-step-3">Continuar <i class="fas fa-arrow-right"></i></button>
+        </div>
+        <!-- Paso 4 -->
+        <div class="step" id="step-4" style="display:none;">
+          <h2>Paso 4: Tus datos y envío</h2>
+          <div class="form-group">
+            <label for="clientName">Tu nombre</label>
+            <input id="clientName" required>
+          </div>
+          <div class="form-group">
+            <label for="clientPhone">Teléfono de contacto</label>
+            <input id="clientPhone" required pattern="^[0-9]{10,15}$" placeholder="Ejemplo: 5512345678">
+          </div>
+          <div class="form-group">
+            <label for="notes">Notas adicionales</label>
+            <textarea id="notes" placeholder="Opcional"></textarea>
+          </div>
+          <button type="submit" class="btn-submit"><i class="fab fa-whatsapp"></i> Enviar por WhatsApp</button>
+          <div id="orderFeedback"></div>
+        </div>
+      </form>
+    </section>
+
+    <section id="track" class="section">
+      <h2><i class="fas fa-search-location"></i> Seguimiento de Pedido</h2>
+      <form id="track-form">
+        <label for="trackId">Ingresa tu ID de pedido:</label>
+        <input id="trackId" required>
+        <button type="submit" class="btn-track">
+          <i class="fas fa-search-location"></i> Consultar Estado
+        </button>
+      </form>
+      <div id="trackResult"></div>
+    </section>
+
+    <section id="faq" class="section">
+      <h2><i class="fas fa-question-circle"></i> Preguntas Frecuentes</h2>
+      <div class="faq-list">
+        <details><summary>¿Cómo solicito un servicio?</summary><p>Haz clic en "Solicitar Servicio" y sigue los pasos.</p></details>
+        <details><summary>¿Cómo puedo saber el estado de mi pedido?</summary><p>Ingresa el ID de tu pedido en la sección "Mi Pedido".</p></details>
+        <details><summary>¿Cuánto cuesta el servicio?</summary><p>El precio base se muestra en cada servicio. El precio final puede variar según la distancia y detalles.</p></details>
+        <details><summary>¿En qué horarios operan?</summary><p>Consulta los horarios en la página principal. Las solicitudes fuera de horario serán deshabilitadas.</p></details>
+      </div>
+    </section>
+
+    <section id="gallery" class="section">
+      <h2><i class="fas fa-image"></i> Nuestro trabajo y clientes felices</h2>
+      <div class="gallery">
+        <figure>
+          <img src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80" alt="Entrega rápida">
+          <figcaption>Entrega rápida de alimentos</figcaption>
+        </figure>
+        <figure>
+          <img src="https://images.unsplash.com/photo-1524253482453-3fed8d2fe12b?auto=format&fit=crop&w=400&q=80" alt="Mandado personalizado">
+          <figcaption>Mandado personalizado</figcaption>
+        </figure>
+        <figure>
+          <img src="https://images.unsplash.com/photo-1516910817561-7b8f2f4b1a81?auto=format&fit=crop&w=400&q=80" alt="Cliente feliz">
+          <figcaption>Cliente feliz</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <h2><i class="fas fa-envelope"></i> Contacto</h2>
+      <p>WhatsApp: <a href="https://wa.me/50493593126">+504 9359-3126</a></p>
+      <p>Email: <a href="mailto:contacto@fastgo.com">contacto@fastgo.com</a></p>
+      <p>Instagram: <a href="https://instagram.com/fastgo" target="_blank">@fastgo</a></p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-content">
+      <span>© 2025 FastGo. Todos los derechos reservados.</span>
+      <span>Sitio desarrollado por rimedhn.</span>
+    </div>
+  </footer>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
