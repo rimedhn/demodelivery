@@ -11,13 +11,13 @@
 <body>
   <!-- Menú interactivo tipo app -->
   <nav id="app-menu" class="app-menu">
-    <button data-section="services"><i class="fas fa-list"></i><span>Servicios</span></button>
-    <button data-section="order-stepper"><i class="fas fa-bolt"></i><span>Solicitar</span></button>
+    <button data-section="services" style="order:1"><i class="fas fa-list"></i><span>Servicios</span></button>
+    <button data-section="order-stepper" style="order:2"><i class="fas fa-bolt"></i><span>Solicitar</span></button>
     <button data-section="home" class="active" style="order:3"><i class="fas fa-home"></i><span>Inicio</span></button>
-    <button data-section="track"><i class="fas fa-search-location"></i><span>Mi Pedido</span></button>
-    <button data-section="faq"><i class="fas fa-question-circle"></i><span>FAQ</span></button>
-    <button data-section="gallery"><i class="fas fa-image"></i><span>Galería</span></button>
-    <button data-section="contact"><i class="fas fa-envelope"></i><span>Contacto</span></button>
+    <button data-section="track" style="order:4"><i class="fas fa-search-location"></i><span>Mi Pedido</span></button>
+    <button data-section="faq" style="order:5"><i class="fas fa-question-circle"></i><span>FAQ</span></button>
+    <button data-section="gallery" style="order:6"><i class="fas fa-image"></i><span>Galería</span></button>
+    <button data-section="contact" style="order:7"><i class="fas fa-envelope"></i><span>Contacto</span></button>
   </nav>
   <main>
     <section id="home" class="section active">
@@ -30,7 +30,7 @@
       <div class="categories-list" id="categories-list"></div>
       <div class="services-in-category" id="services-in-category"></div>
     </section>
-    <section id="order-intro" class="section">
+    <section id="order-intro" class="section" style="display:none;">
       <div class="order-intro-container">
         <button id="start-order-btn" class="start-order-btn btn-stepper">
           <span><i class="fas fa-rocket"></i> Solicitar Servicio</span>
