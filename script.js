@@ -311,7 +311,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 document.getElementById("whatsapp-send-btn").onclick = function(e) {
-  let service = services.find(s => s.id === document.getElementById("serviceType").value);
+  e.preventDefault();
+  let serviceId = document.getElementById("serviceType").value;
+  let service = services.find(s => s.id === serviceId);
   let desc = document.getElementById("description").value.trim();
   let origin = document.getElementById("origin").value.trim();
   let dest = document.getElementById("destination").value.trim();
@@ -319,13 +321,15 @@ document.getElementById("whatsapp-send-btn").onclick = function(e) {
   let phone = document.getElementById("clientPhone").value.trim();
   let notes = document.getElementById("notes").value.trim();
   let feedback = document.getElementById("orderFeedback");
-  feedback.textContent = "";
 
+  // Validaciones para todos los campos y mapas
   if (!service || !desc || !origin || !dest || !name || !phone || !originCoords || !destinationCoords) {
     customAlert("Por favor completa todos los campos y selecciona los puntos en el mapa.", "error");
+    feedback.textContent = "";
     return;
   }
 
+  // Mensaje para WhatsApp
   let msg =
 `*Pedido FastGo*
 Nombre: ${name}
@@ -344,11 +348,13 @@ Precio base: $${service.precio_base}
 Horario servicio: ${service.horario}
 `;
 
+  // Guardar pedido en localStorage (opcional)
   let pedidos = JSON.parse(localStorage.getItem("fastgoPedidos") || "[]");
   let pedidoID = "FG" + Date.now().toString().slice(-6);
-  pedidos.push({id:pedidoID, nombre, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
+  pedidos.push({id:pedidoID, nombre:name, phone, servicio:service.nombre, desc, origin, dest, date: new Date().toLocaleString()});
   localStorage.setItem("fastgoPedidos", JSON.stringify(pedidos));
 
+  // Abrir WhatsApp
   let waUrl = "https://wa.me/50493593126?text=" + encodeURIComponent(msg);
   window.open(waUrl, "_blank");
   customAlert("¡Pedido generado y listo para enviar por WhatsApp!", "success");
